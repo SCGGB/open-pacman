@@ -148,6 +148,12 @@ function decideGhost( game, g ) {
     const tx = px + d.x * 4;
     const ty = py + d.y * 4;
     g.dir = greedyStep( choices, g, tx, ty );
+  } else if ( g.kind === 'flanker' ) {
+    const hunter = game.ghosts.find( ( h ) => h.kind === 'hunter' );
+    const d = DIRS[ p.dir ];
+    const tx = 2 * px + 4 * d.x - hunter.x;
+    const ty = 2 * py + 4 * d.y - hunter.y;
+    g.dir = greedyStep( choices, g, tx, ty );
   } else {
     g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
   }
