@@ -29,6 +29,7 @@ function createGame() {
     lives: 3,
     dotsRemaining: dots,
     grid,
+    frameCount: 0,
     pacman: {
       x: PACMAN_START.x,
       y: PACMAN_START.y,
@@ -42,6 +43,7 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      releaseAt: g.releaseAt,
     } ) ),
   };
 }
@@ -142,6 +144,7 @@ function decideGhost( game, g ) {
 }
 
 function moveGhost( game, g ) {
+  if ( game.frameCount < g.releaseAt ) return;
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -176,6 +179,7 @@ function collides( a, b ) {
 }
 
 function update( game ) {
+  game.frameCount++;
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
