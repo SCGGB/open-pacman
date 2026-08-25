@@ -154,8 +154,28 @@ function decideGhost( game, g ) {
     const tx = 2 * px + 4 * d.x - hunter.x;
     const ty = 2 * py + 4 * d.y - hunter.y;
     g.dir = greedyStep( choices, g, tx, ty );
+  } else if ( g.kind === 'shy' ) {
+    const dist = Math.abs( g.x - px ) + Math.abs( g.y - py );
+    if ( dist > 8 ) {
+      g.dir = greedyStep( choices, g, px, py );
+    } else {
+      // Huir: maximizar distancia a Pacman.
+      let best = choices[ 0 ];
+      let bestDist = -Infinity;
+      for ( const dir of choices ) {
+        const dd = DIRS[ dir ];
+        const nx = g.x + dd.x;
+        const ny = g.y + dd.y;
+        const d2 = Math.abs( nx - px ) + Math.abs( ny - py );
+        if ( d2 > bestDist ) {
+          bestDist = d2;
+          best = dir;
+        }
+      }
+      g.dir = best;
+    }
   } else {
-    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
+    g.dir = greedyStep( choices, g, px, py );
   }
 }
 
