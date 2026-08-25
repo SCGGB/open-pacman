@@ -112,6 +112,22 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
+function greedyStep( choices, g, tx, ty ) {
+  let best = choices[ 0 ];
+  let bestDist = Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const nx = g.x + d.x;
+    const ny = g.y + d.y;
+    const dist = Math.abs( nx - tx ) + Math.abs( ny - ty );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = dir;
+    }
+  }
+  return best;
+}
+
 function decideGhost( game, g ) {
   const grid = game.grid;
   const p = game.pacman;
@@ -122,22 +138,16 @@ function decideGhost( game, g ) {
   // Sin salida (callejon): permitir el giro de 180.
   const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
 
+  const px = Math.round( p.x );
+  const py = Math.round( p.y );
+
   if ( g.kind === 'hunter' ) {
-    const px = Math.round( p.x );
-    const py = Math.round( p.y );
-    let best = choices[ 0 ];
-    let bestDist = Infinity;
-    for ( const dir of choices ) {
-      const d = DIRS[ dir ];
-      const nx = g.x + d.x;
-      const ny = g.y + d.y;
-      const dist = Math.abs( nx - px ) + Math.abs( ny - py );
-      if ( dist < bestDist ) {
-        bestDist = dist;
-        best = dir;
-      }
-    }
-    g.dir = best;
+    g.dir = greedyStep( choices, g, px, py );
+  } else if ( g.kind === 'ambusher' ) {
+    const d = DIRS[ p.dir ];
+    const tx = px + d.x * 4;
+    const ty = py + d.y * 4;
+    g.dir = greedyStep( choices, g, tx, ty );
   } else {
     g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
   }
