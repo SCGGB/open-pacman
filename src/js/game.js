@@ -29,6 +29,7 @@ function createGame() {
     lives: 3,
     dotsRemaining: dots,
     grid,
+    frameCount: 0,
     pacman: {
       x: PACMAN_START.x,
       y: PACMAN_START.y,
@@ -42,6 +43,7 @@ function createGame() {
       dir: 'up',
       speed: GHOST_SPEED,
       kind: g.kind,
+      releaseAt: g.releaseAt,
     } ) ),
   };
 }
@@ -110,6 +112,22 @@ function movePacman( game ) {
   wrapTunnel( p, width );
 }
 
+function greedyStep( choices, g, tx, ty ) {
+  let best = choices[ 0 ];
+  let bestDist = Infinity;
+  for ( const dir of choices ) {
+    const d = DIRS[ dir ];
+    const nx = g.x + d.x;
+    const ny = g.y + d.y;
+    const dist = Math.abs( nx - tx ) + Math.abs( ny - ty );
+    if ( dist < bestDist ) {
+      bestDist = dist;
+      best = dir;
+    }
+  }
+  return best;
+}
+
 function decideGhost( game, g ) {
   const grid = game.grid;
   const p = game.pacman;
@@ -120,28 +138,49 @@ function decideGhost( game, g ) {
   // Sin salida (callejon): permitir el giro de 180.
   const choices = options.length ? options : [ '' + OPPOSITE[ g.dir ] ];
 
+  const px = Math.round( p.x );
+  const py = Math.round( p.y );
+
   if ( g.kind === 'hunter' ) {
-    const px = Math.round( p.x );
-    const py = Math.round( p.y );
-    let best = choices[ 0 ];
-    let bestDist = Infinity;
-    for ( const dir of choices ) {
-      const d = DIRS[ dir ];
-      const nx = g.x + d.x;
-      const ny = g.y + d.y;
-      const dist = Math.abs( nx - px ) + Math.abs( ny - py );
-      if ( dist < bestDist ) {
-        bestDist = dist;
-        best = dir;
+    g.dir = greedyStep( choices, g, px, py );
+  } else if ( g.kind === 'ambusher' ) {
+    const d = DIRS[ p.dir ];
+    const tx = px + d.x * 4;
+    const ty = py + d.y * 4;
+    g.dir = greedyStep( choices, g, tx, ty );
+  } else if ( g.kind === 'flanker' ) {
+    const hunter = game.ghosts.find( ( h ) => h.kind === 'hunter' );
+    const d = DIRS[ p.dir ];
+    const tx = 2 * px + 4 * d.x - hunter.x;
+    const ty = 2 * py + 4 * d.y - hunter.y;
+    g.dir = greedyStep( choices, g, tx, ty );
+  } else if ( g.kind === 'shy' ) {
+    const dist = Math.abs( g.x - px ) + Math.abs( g.y - py );
+    if ( dist > 8 ) {
+      g.dir = greedyStep( choices, g, px, py );
+    } else {
+      // Huir: maximizar distancia a Pacman.
+      let best = choices[ 0 ];
+      let bestDist = -Infinity;
+      for ( const dir of choices ) {
+        const dd = DIRS[ dir ];
+        const nx = g.x + dd.x;
+        const ny = g.y + dd.y;
+        const d2 = Math.abs( nx - px ) + Math.abs( ny - py );
+        if ( d2 > bestDist ) {
+          bestDist = d2;
+          best = dir;
+        }
       }
+      g.dir = best;
     }
-    g.dir = best;
   } else {
-    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
+    g.dir = greedyStep( choices, g, px, py );
   }
 }
 
 function moveGhost( game, g ) {
+  if ( game.frameCount < g.releaseAt ) return;
   const grid = game.grid;
   const width = grid[ 0 ].length;
 
@@ -176,6 +215,7 @@ function collides( a, b ) {
 }
 
 function update( game ) {
+  game.frameCount++;
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
